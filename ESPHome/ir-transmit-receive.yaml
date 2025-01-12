@@ -38,14 +38,14 @@ captive_portal:
 web_server:
   port: 80
 
-# Quản lý trạng thái LED (D5)
+# Quản lý trạng thái LED
 switch:
   - platform: gpio
     pin: D4
     id: led_1
     name: "LED State"
     
-# Cấu hình IR transmitter (D6)
+# Cấu hình IR transmitter 
 remote_transmitter:
   pin: D5
   carrier_duty_percent: 50%
@@ -56,7 +56,7 @@ remote_transmitter:
 #     type: time
 #     initial_value: 100us
 
-# Cấu hình IR receiver (D7)
+# Cấu hình IR receiver 
 remote_receiver:
   pin:
     number: D8
