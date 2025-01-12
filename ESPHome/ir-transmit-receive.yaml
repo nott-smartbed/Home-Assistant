@@ -1,0 +1,92 @@
+substitutions:
+  devicename: "IRLight"
+  deviceid: "irlight"
+
+esphome:
+  name: "${deviceid}"
+  friendly_name: Test
+
+esp8266:
+  board: nodemcuv2
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "q+bM+RpJ+QXzWSV+4rx1TPOUCVR5Bo4f1ARCpOm+gq8="
+
+ota:
+  - platform: esphome
+    password: "1d51470a2ada4322c4379e8996c1d1e1"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  # manual_ip:
+  #   static_ip: 192.168.100.109
+  #   gateway: 192.168.100.1
+  #   subnet: 255.255.255.0
+  fast_connect: on    
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Test-Led Fallback Hotspot"
+    password: !secret wifi_password
+
+captive_portal:
+web_server:
+  port: 80
+
+# Quản lý trạng thái LED (D5)
+switch:
+  - platform: gpio
+    pin: D4
+    id: led_1
+    name: "LED State"
+    
+# Cấu hình IR transmitter (D6)
+remote_transmitter:
+  pin: D5
+  carrier_duty_percent: 50%
+
+# Biến global để lưu giá trị filter
+# globals:
+#   - id: remote_filter
+#     type: time
+#     initial_value: 100us
+
+# Cấu hình IR receiver (D7)
+remote_receiver:
+  pin:
+    number: D8
+    inverted: True
+  dump: nec
+  tolerance: 20%
+  idle: 4ms
+  filter: 100us
+  on_nec:
+    then:
+      - lambda: |-
+          ESP_LOGI("IR Receiver", "Received NEC: address=0x%02X, command=0x%02X", x.address, x.command);
+      - if:
+          condition:
+            and:
+              - lambda: 'return (x.address == 0x00F0);'  
+              - lambda: 'return (x.command == 0x000F);' 
+          then:
+            - switch.toggle: led_1
+            - logger.log: "Received matching IR code - toggling LED"
+
+# Nút nhấn ảo để phát tín hiệu hồng ngoại
+button:
+  - platform: template
+    name: "IR Send Button"
+    on_press:
+      - remote_transmitter.transmit_nec:
+          address: 0x00F0 
+          command: 0x000F  
+      - lambda: |-
+          ESP_LOGI("IR Transmitter", "Sent NEC: address=0x00F0, command=0x000F");
+  
+          
