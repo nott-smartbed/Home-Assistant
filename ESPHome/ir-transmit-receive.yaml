@@ -41,7 +41,7 @@ web_server:
 # Quản lý trạng thái LED
 switch:
   - platform: gpio
-    pin: D4
+    pin: D3
     id: led_1
     name: "LED State"
     
