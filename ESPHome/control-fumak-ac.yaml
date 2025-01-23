@@ -35,7 +35,7 @@ web_server:
 # LED state
 switch:
   - platform: gpio
-    pin: D3
+    pin: D4
     id: signal_led
     name: "LED State"
 
@@ -50,14 +50,13 @@ remote_receiver:
     number: D7
     inverted: True
   id: ir_receiver
-  dump: 
-    - raw
+  dump: raw
   tolerance: 20%
   filter: 100us
   on_raw:
     then:
       - switch.turn_on: signal_led
-      - delay: 50ms  # LED sáng trong 50ms giây
+      - delay: 50ms 
       - switch.turn_off: signal_led
 
 # Globals for state management
@@ -66,9 +65,9 @@ globals:
     type: std::vector<int>
     restore_value: no
     # Ban đầu nhiệt độ 27, power: tắt, mode: auto, swing: tắt, eco: tắt, sleep: tắt, display: tắt, timer: tắt, turbo: tắt, speed: auto
-    initial_value: '{0x18, 0x27, 0xB1, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0x00}'
+    initial_value: '{0x18, 0x27, 0xB1, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x80, 0x80, 0x00}'
 
-  - id: raw
+  - id: ir_raw
     type: std::vector<int>
     restore_value: no
     initial_value: '{3180, -3150}'
@@ -82,33 +81,19 @@ globals:
     restore_value: no
     initial_value: "1"  # Auto
 
+# Nhiệt độ 
+# Thứ tự tương ứng với Main-Auto-Cool-Dry-FanOnly-Heat
   - id: temperature
-    type: int
+    type: std::vector<int>
     restore_value: no
-    initial_value: "27"
+    initial_value: "{27,27,27,27,27,27}"
 
-  - id: timer_active
-    type: bool
-    restore_value: no
-    initial_value: 'false'  
-  - id: timer_wait
-    type: int
-    restore_value: no
-    initial_value: "0"
-  - id: timer_state
-    type: bool
-    restore_value: no
-    initial_value: "false"
-  - id: timer_value
-    type: int
-    restore_value: no
-    initial_value: "0"
-
-    #Fan speed: 1-Level 2, 2-Level 4, 4-Level 6, 8-level Auto
+# Fan speed: 1-Level 2, 2-Level 4, 4-Level 6, 8-level Auto
+# Thứ tự tương ứng với Main-Auto-Cool-Dry-FanOnly-Heat
   - id: fan_speed
-    type: int
+    type: std::vector<int>
     restore_value: no
-    initial_value: "8"  # Fan speed auto
+    initial_value: "{8,8,1,8,8,8}"  
 
   - id: turbo_state
     type: bool
@@ -130,6 +115,28 @@ globals:
     type: bool
     restore_value: no
     initial_value: "true"
+  - id: lock_state
+    type: bool
+    restore_value: no
+    initial_value: "false"
+
+# Timer
+  - id: timer_active
+    type: bool
+    restore_value: no
+    initial_value: 'false'  
+  - id: timer_wait
+    type: int
+    restore_value: no
+    initial_value: "0"
+  - id: timer_state
+    type: bool
+    restore_value: no
+    initial_value: "false"
+  - id: timer_value
+    type: int
+    restore_value: no
+    initial_value: "0"
 
 # Function to generate raw IR signal
 script:
@@ -138,20 +145,26 @@ script:
     then:
       - lambda: |-
           int index = 2;
-          for (int byte_index = 0; byte_index < 12; byte_index++) {
+          id(ir_raw).resize(195);
+          for (int byte_index = 0; byte_index < 12; byte_index++) 
+          {
             for (int bit_index = 7; bit_index >= 0; bit_index--) {
-              if (id(ir_data)[byte_index] & (1 << bit_index)) {
-                id(raw)[index++] = 360;
-                id(raw)[index++] = -1200;
-              } else {
-                id(raw)[index++] = 360;
-                id(raw)[index++] = -410;
+              if ( (id(ir_data)[byte_index] & (1 << bit_index)) == (1 << bit_index) ) 
+              {
+                id(ir_raw)[index++] = 360;
+                id(ir_raw)[index++] = -1200;
+              } else 
+              {
+                id(ir_raw)[index++] = 360;
+                id(ir_raw)[index++] = -410;
               }
             }
           }
-          id(raw)[index++] = 360;  // Footer
+          id(ir_raw)[index++] = 360;  // Footer
+          id(ir_raw).resize(index);
+
       - remote_transmitter.transmit_raw:
-          code: !lambda "return id(raw);"
+          code: !lambda "return id(ir_raw);"
           carrier_frequency: 38kHz
           repeat: 
             times: 2
@@ -166,9 +179,12 @@ button:
     on_press:
       then:
         - lambda: |-
-            id(power_state) = !id(power_state);
-            id(ir_data)[2] = ( id(ir_data)[2] & 0b11110111 ) | ( id(power_state) ? 0b00001000 : 0x00 );
-            id(send_ir).execute();
+            if (!id(lock_state))
+            {
+              id(power_state) = !id(power_state);
+              id(ir_data)[2] = ( id(ir_data)[2] & 0b11110111 ) | ( id(power_state) ? 0b00001000 : 0x00 );
+              id(send_ir).execute();
+            }
 
   - platform: template
     name: "Mode"
@@ -176,24 +192,64 @@ button:
     on_press:
       then:
         - lambda: |-
-            if (id(power_state)) {
-              id(mode_state) = (id(mode_state) % 5) + 1;
-              if (id(mode_state) < 4){
-                id(ir_data)[2] = (id(ir_data)[2] & 0b11111000) | id(mode_state);
-                if (id(mode_state) == 3) {  // Dry mode
-                  id(temperature) = 24;  // Fixed to 24°C
-                  id(ir_data)[2] = (id(ir_data)[2] & 0b11101111) | (24 - 16) << 4;
+            if ( id(power_state) && !id(lock_state) ) 
+            {
+              id(mode_state) = (id(mode_state) % 5) + 1;   
+              //Auto, Cool, Dry
+              for (int i=1; i<4; i++)
+              {
+                id(ir_data)[2] = (id(ir_data)[2] & 0b11111000) | id(mode_state); 
+                id(ir_data)[2] = (id(ir_data)[2] & 0b00001111) | (id(temperature)[i] - 16) << 4;
+                id(ir_data)[10] = (id(ir_data)[10] & 0b00001111) | id(fan_speed)[i];                
               }
-              else if (id(mode_state) == 4) {  //Fan only
-                id(ir_data)[2] = (id(ir_data)[2] & 0b11111000) | 5;
+              //FanOnly, Heat
+              for (int i=4; i<=5; i++)
+              {
+                id(ir_data)[2] = (id(ir_data)[2] & 0b11111000) | (id(mode_state) + 1); 
+                id(ir_data)[2] = (id(ir_data)[2] & 0b00001111) | (id(temperature)[i] - 16) << 4;
+                id(ir_data)[10] = (id(ir_data)[10] & 0b00001111) | id(fan_speed)[i];
               }
-              else if (id(mode_state) == 5) {  //heat
-                id(ir_data)[2] = (id(ir_data)[2] & 0b11111000) | 6;
-                id(fan_speed) = 8;  // Auto speed
-                id(ir_data)[10] = (id(ir_data)[10] & 0b00001111) | 0b10000000;
-              }
-
+              id(temperature)[0] = id(temperature)[id(mode_state)] ;
+              id(fan_speed)[0] = id(fan_speed)[id(mode_state)] ;
               id(send_ir).execute();
+            }
+
+  - platform: template
+    name: "Cool"
+    id: cool
+    on_press:
+      then:
+        - lambda: |-
+            if (!id(lock_state))
+            {
+              id(mode_state) = 2;
+              id(power_state) = 1;            
+              id(ir_data)[2] = (id(ir_data)[2] & 0b11111000) | 2;
+              id(ir_data)[2] = (id(ir_data)[2] & 0b00001111) | (id(temperature)[2] - 16) << 4;
+              id(ir_data)[10] = (id(ir_data)[10] & 0b00001111) | id(fan_speed)[2]; 
+                // Cập nhật giá trị chính
+              id(temperature)[0] = id(temperature)[2] ;
+              id(fan_speed)[0] = id(fan_speed)[2] ;
+              id(send_ir).execute();
+            }
+
+  - platform: template
+    name: "Heat"
+    id: heat
+    on_press:
+      then:
+        - lambda: |-
+            if (!id(lock_state))
+            {
+              id(mode_state) = 5;
+              id(power_state) = 1;            
+              id(ir_data)[2] = (id(ir_data)[2] & 0b11111000) | 5;
+              id(ir_data)[2] = (id(ir_data)[2] & 0b00001111) | (id(temperature)[5] - 16) << 4;
+              id(ir_data)[10] = (id(ir_data)[10] & 0b00001111) | id(fan_speed)[5]; 
+                // Cập nhật giá trị chính
+              id(temperature)[0] = id(temperature)[5] ;
+              id(fan_speed)[0] = id(fan_speed)[5] ;
+              id(send_ir).execute(); 
             }
 
   - platform: template
@@ -202,10 +258,11 @@ button:
     on_press:
       then:
         - lambda: |-
-            if (id(power_state)) {
-              if (id(mode_state) != 4) {  // Not Fan Only
-                id(temperature) = clamp(id(temperature) + 1, 18, 30);
-                id(ir_data)[2] = id(ir_data)[2] | ((id(temperature) - 16) << 4);
+            if (id(power_state) && !id(lock_state) ) 
+            {
+              if ( (id(mode_state) != 4) || (id(mode_state) != 1) ) {  // Not Fan Only, Auto
+                id(temperature)[id(mode_state)] = clamp(id(temperature)[id(mode_state)] + 1, 16, 30);
+                id(ir_data)[2] = id(ir_data)[2] | ( (id(temperature)[id(mode_state)] - 16) << 4);
                 id(send_ir).execute();
               }
             }
@@ -216,10 +273,11 @@ button:
     on_press:
       then:
         - lambda: |-
-            if (id(power_state)) {
-              if (id(mode_state) != 4) {  // Not Fan Only
-                id(temperature) = clamp(id(temperature) - 1, 18, 30);
-                id(ir_data)[2] = id(ir_data)[2] | ((id(temperature) - 16) << 4);
+            if (id(power_state) && !id(lock_state) ) 
+            {
+              if ( (id(mode_state) != 4) || (id(mode_state) != 1) ) {  // Not Fan Only, Auto
+                id(temperature)[id(mode_state)] = clamp(id(temperature)[id(mode_state)] - 1, 16, 30);
+                id(ir_data)[2] = id(ir_data)[2] | ((id(temperature)[id(mode_state)] - 16) << 4);
                 id(send_ir).execute();
               }
             }
@@ -230,9 +288,20 @@ button:
     on_press:
       then:
         - lambda: |-
-            if (id(power_state)){
-              id(fan_speed) = (id(fan_speed) == 8) ?  1 : (id(fan_speed) << 1);
-              id(ir_data)[10] = (id(ir_data)[10] & 0b00001111) | (id(fan_speed) << 4);
+            // Nếu power on và not Dry, not lock
+            if ( id(power_state) && ( id(fan_speed)[id(mode_state)] != 3) && !id(lock_state) ) 
+            {
+              // Tăng speed: 1-2-4-8
+              if ( id(fan_speed)[id(mode_state)] == 8 ) {
+                id(fan_speed)[id(mode_state)] = 1;
+              }
+              else {
+                id(fan_speed)[id(mode_state)] = id(fan_speed)[id(mode_state)] << 1;
+              }
+              // Giá trị speed hiển thị
+              id(fan_speed)[0] = id(fan_speed)[id(mode_state)] ;
+              // Ghi vào IR data
+              id(ir_data)[10] = (id(ir_data)[10] & 0b00001111) | (id(fan_speed)[id(mode_state)] << 4);
               id(send_ir).execute();
             }
 
@@ -242,21 +311,16 @@ button:
     on_press:
       then:
         - lambda: |-
-            if (id(power_state)){
+            // power on và mode là cool hoặc heat, không lock
+            if ( id(power_state) && (id(mode_state) == 2 || id(mode_state) == 5) && !id(lock_state) )
+            {
               id(turbo_state) = !id(turbo_state);
-              id(ir_data)[9] = (id(ir_data)[9] & 0b01111111) | (id(turbo_state) ? 0x00 : 0b10000000);
-              id(send_ir).execute();
-            }
-
-  - platform: template
-    name: "Swing"
-    id: swing
-    on_press:
-      then:
-        - lambda: |-
-            if (id(power_state)){  
-              id(swing_state) = !id(swing_state);
-              id(ir_data)[3] = (id(ir_data)[3] & 0b01111111) | (id(swing_state) ? 0b10000000 : 0x00);
+              if (id(turbo_state)) 
+              {  // nếu bật Turbo thì tắt Eco 
+                id(eco_state) = 0;
+                id(ir_data)[4] = id(ir_data)[4] & 0b01111111 ;
+              }
+              id(ir_data)[9] = (id(ir_data)[9] & 0b01111111) | (id(turbo_state) ? 0x00 : 0b10000000);              
               id(send_ir).execute();
             }
 
@@ -266,19 +330,39 @@ button:
     on_press:
       then:
         - lambda: |-
-            if (id(power_state)){
+            //nếu power on và mode là Cool
+            if ( id(power_state) && id(mode_state) == 2 && !id(lock_state) )
+            {
               id(eco_state) = !id(eco_state);
+              if (id(eco_state)) {  //Nếu bật Eco thì tắt Turbo
+                id(turbo_state) = 0; 
+                id(ir_data)[9] = id(ir_data)[9] & 0b01111111;
+              }
               id(ir_data)[4] = (id(ir_data)[4] & 0b01111111) | (id(eco_state) ? 0b10000000 : 0x00);
               id(send_ir).execute();
             }
 
   - platform: template
-    name: "Sleep"
-    id: sleepmode
+    name: "Swing"
+    id: swing
     on_press:
       then:
         - lambda: |-
-            if (id(power_state)){
+            if (id(power_state) && !id(lock_state) )
+            {  
+              id(swing_state) = !id(swing_state);
+              id(ir_data)[3] = (id(ir_data)[3] & 0b01111111) | (id(swing_state) ? 0b10000000 : 0x00);
+              id(send_ir).execute();
+            }
+
+  - platform: template
+    name: "Sleep"
+    id: sleep_button
+    on_press:
+      then:
+        - lambda: |-
+            if ( id(power_state) && ( id(mode_state)==2 || id(mode_state)==5 ) && !id(lock_state) )
+            {
               id(sleep_state) = !id(sleep_state);
               id(ir_data)[5] = (id(ir_data)[5] & 0b10111111) | (id(sleep_state) ? 0b01000000 : 0x00);
               id(send_ir).execute();
@@ -290,10 +374,103 @@ button:
     on_press:
       then:
         - lambda: |-
-            if (id(power_state)){
+            if (id(power_state) && !id(lock_state) )
+            {
               id(timer_state) = !id(timer_state);
               id(timer_value) = id(timer_state) ? 1 : 0;
               id(ir_data)[7] = (id(ir_data)[7] & 0b11110000) | id(timer_value);
               id(ir_data)[8] = (id(ir_data)[8] & 0b01111111) | (id(timer_state) ? 0b10000000 : 0x00);
               id(send_ir).execute();      
-            }                           
+            }                      
+  - platform: template
+    name: "Display"
+    id: display
+    on_press: 
+      then:
+        - lambda: |-
+            if ( !id(lock_state) )
+            {
+              id(display_state) = !id(display_state);
+              id(ir_data)[7] = (id(ir_data)[7] & 0b10111111) | (id(display_state) << 6) ;
+              id(send_ir).execute(); 
+            }
+             
+  - platform: template
+    name: "Lock"
+    id: lock            
+    on_press: 
+      then:
+        - lambda: |-
+            if (id(power_state))
+            {
+              id(lock_state) = !id(lock_state);
+              id(ir_data)[10] = (id(ir_data)[10] & 0b11111011 ) | id(lock_state) << 2;
+              id(send_ir).execute();
+            }
+
+#Định nghĩa một handler hiển thị giá trị
+text_sensor:
+  - platform: template
+    id: show_status
+    name: "AC Status"     
+    lambda: |-
+      std::string power = id(power_state) ? "ON" : "OFF";
+      std::string turbo = id(turbo_state) ? "ON" : "OFF";
+      std::string eco = id(eco_state) ? "ON" : "OFF";
+      std::string swing = id(swing_state) ? "ON" : "OFF";
+      std::string sleep = id(sleep_state) ? "ON" : "OFF";
+      std::string temp = std::to_string(id(temperature)[0]);
+      std::string lock = id(lock_state) ? "ON" : "OFF";
+      std::string display = id(display_state) ? "ON" : "OFF";      
+      // Định nghĩa trạng thái mode
+      std::string mode;
+      switch (id(mode_state)) 
+      {
+        case 1:
+          mode = "Auto";
+          break;
+        case 2:
+          mode = "Cool";
+          break;
+        case 3:
+          mode = "Dry";
+          break;
+        case 4:
+          mode = "Fan";
+          break;
+        case 5:
+          mode = "Heat";
+          break;
+        default:
+          mode = "Unknown";
+      }
+
+      // Định nghĩa trạng thái fan_speed
+      std::string speed;
+      switch (id(fan_speed)[0]) {
+        case 1:
+          speed = "Level 2";
+          break;
+        case 2:
+          speed = "Level 4";
+          break;
+        case 4:
+          speed = "Level 6";
+          break;
+        case 8:
+          speed = "Auto";
+          break;
+        default:
+          speed = "Unknown";
+      }
+
+      return "Power: " + power + " | \n" +
+              "Temperature: " + temp + " | \n" +
+              "Mode: " + mode + " | \n" +
+              "Turbo: " + turbo + " | \n" +
+              "Eco: " + eco + " | \n" +
+              "Fan Speed: " + speed + " | \n" +
+              "Swing: " + swing + " | \n" +
+              "Sleep: " + sleep + " | \n" +
+              "Lock: " + lock + " | \n" +
+              "Display: " + display;
