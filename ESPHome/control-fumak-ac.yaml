@@ -144,7 +144,12 @@ script:
     mode: queued
     then:
       - lambda: |-
-          int index = 2;
+          int index = 2, sum=0;
+          for (int i=0; i < 11; i++)
+          {
+            sum = sum + ( (id(ir_data)[i] & 0b11110000) >> 4 ) + ( id(ir_data)[i] & 0b00001111 );
+          }
+          id(ir_data)[11] = sum - 18;
           id(ir_raw).resize(195);
           for (int byte_index = 0; byte_index < 12; byte_index++) 
           {
