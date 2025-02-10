@@ -1,0 +1,79 @@
+# Loads default set of integrations. Do not remove.
+default_config:
+
+influxdb:
+  host: 192.168.100.37
+  port: 8086
+  database: homeassistant
+  username: admin
+  password: admin
+  max_retries: 3
+  default_measurement: state
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+ir_codes: !include ir_codes.yaml
+
+input_select:
+  device_type:
+    name: "Device Type"
+    options:
+      - "AC"
+      - "TV"
+      - "Fan"
+    initial: "AC"
+
+  ac_brand:
+    name: "AC Brand"
+    options:
+      - "None"
+      - "Daikin"
+      - "Daikin ARC"
+      - "Ballu"
+      - "Coolix"
+      - "Delonghi"
+      - "Emmeti"
+      - "Fujitsu"
+      - "LG"
+      - "Midea"
+      - "Mitsubishi"
+      - "Noblex"
+      - "Electrolux"
+      - "Toshiba"
+      - "Whirlpool"
+      - "Panasonic"
+      - "Samsung"
+
+  tv_brand:
+    name: "TV Brand"
+    options:
+      - "None"
+      - "Samsung"
+      - "Sony"
+      - "LG"
+      - "Lenovo"
+      - "Fujitsu"
+      - "Toshiba"
+      - "Panasonic"
+      - "Xiaomi"
+
+  fan_brand:
+    name: "Fan Brand"
+    options:
+      - "None"
+      - "Aux"
+      - "Mitsubishi"
+      - "Panasonic"
+      - "Daikin"
+      - "Senko"
+      - "Pioneer"
+      - "Honeywell"
+      - "Midea"
+      - "Electrolux"
+      - "Toshiba"
+      - "Xiaomi"
