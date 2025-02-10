@@ -1,0 +1,486 @@
+views:
+  - title: Home
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Control Devices
+            heading_style: title
+            icon: mdi:cellphone-wireless
+          - type: vertical-stack
+            cards:
+              - type: entities
+                entities:
+                  - entity: input_select.device_type
+                    name: Select Device Type
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: AC
+                card:
+                  type: entities
+                  entities:
+                    - entity: input_select.ac_brand
+                      name: Select AC Brand
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: AC
+                  - entity: input_select.ac_brand
+                    state: Daikin
+                card:
+                  type: thermostat
+                  entity: climate.control_air_conditioner_daikin_ac
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: AC
+                  - entity: input_select.ac_brand
+                    state: Daikin ARC
+                card:
+                  type: thermostat
+                  entity: climate.control_air_conditioner_daikin_arc_ac
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: AC
+                  - entity: input_select.ac_brand
+                    state: Ballu
+                card:
+                  type: thermostat
+                  entity: climate.control_air_conditioner_ballu_ac
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: AC
+                  - entity: input_select.ac_brand
+                    state: Coolix
+                card:
+                  type: thermostat
+                  entity: climate.control_air_conditioner_coolix_ac
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: AC
+                  - entity: input_select.ac_brand
+                    state: Delonghi
+                card:
+                  type: thermostat
+                  entity: climate.control_air_conditioner_delonghi_ac
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: AC
+                  - entity: input_select.ac_brand
+                    state: Emmeti
+                card:
+                  type: thermostat
+                  entity: climate.control_air_conditioner_emmeti_ac
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: AC
+                  - entity: input_select.ac_brand
+                    state: Fujitsu
+                card:
+                  type: thermostat
+                  entity: climate.control_air_conditioner_fujitsu_ac
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: AC
+                  - entity: input_select.ac_brand
+                    state: LG
+                card:
+                  type: thermostat
+                  entity: climate.control_air_conditioner_lg_ac
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: AC
+                  - entity: input_select.ac_brand
+                    state: Midea
+                card:
+                  type: thermostat
+                  entity: climate.control_air_conditioner_midea_ac
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: AC
+                  - entity: input_select.ac_brand
+                    state: Mitsubishi
+                card:
+                  type: thermostat
+                  entity: climate.control_air_conditioner_mitsubishi_ac
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: AC
+                  - entity: input_select.ac_brand
+                    state: Noblex
+                card:
+                  type: thermostat
+                  entity: climate.control_air_conditioner_noblex_ac
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: AC
+                  - entity: input_select.ac_brand
+                    state: Electrolux
+                card:
+                  type: thermostat
+                  entity: climate.control_air_conditioner_electrolux_ac
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: AC
+                  - entity: input_select.ac_brand
+                    state: Toshiba
+                card:
+                  type: thermostat
+                  entity: climate.control_air_conditioner_toshiba_ac
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: AC
+                  - entity: input_select.ac_brand
+                    state: Whirlpool
+                card:
+                  type: thermostat
+                  entity: climate.control_air_conditioner_whirlpool_ac
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: AC
+                  - entity: input_select.ac_brand
+                    state: Panasonic
+                card:
+                  type: thermostat
+                  entity: climate.control_air_conditioner_panasonic_ac
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: AC
+                  - entity: input_select.ac_brand
+                    state: Samsung
+                card:
+                  type: thermostat
+                  entity: climate.control_air_conditioner_samsung_ac
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: TV
+                card:
+                  type: entities
+                  entities:
+                    - entity: input_select.tv_brand
+                      name: Select TV Brand
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: TV
+                card:
+                  type: conditional
+                  conditions:
+                    - entity: input_select.tv_brand
+                      state_not: None
+                  card:
+                    type: grid
+                    columns: 3
+                    square: false
+                    cards:
+                      - type: button
+                        name: Power
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: power
+                      - type: button
+                        name: Input
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: input
+                      - type: button
+                        name: Mute
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: mute
+                      - type: button
+                        name: 1
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: key_1
+                      - type: button
+                        name: 2
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: key_2
+                      - type: button
+                        name: 3
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: key_3
+                      - type: button
+                        name: 4
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: key_4
+                      - type: button
+                        name: 5
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: key_5
+                      - type: button
+                        name: 6
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: key_6
+                      - type: button
+                        name: 7
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: key_7
+                      - type: button
+                        name: 8
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: key_8
+                      - type: button
+                        name: 9
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: key_9
+                      - type: button
+                        name: Menu
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: menu
+                      - type: button
+                        name: '0'
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: key_0
+                      - type: button
+                        name: Back
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: back
+                      - type: button
+                        name: VOL+
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: volume_up
+                      - type: button
+                        name: ^
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: Up
+                      - type: button
+                        name: CH+
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: ch_up
+                      - type: button
+                        name: <
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: left
+                      - type: button
+                        name: OK
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: ok
+                      - type: button
+                        name: '>'
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: right
+                      - type: button
+                        name: VOL-
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: volume_down
+                      - type: button
+                        name: v
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: down
+                      - type: button
+                        name: CH-
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: ch_down
+                      - type: button
+                        name: List
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: list
+                      - type: button
+                        name: Home
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: TV
+                            brand: '{{ states(''input_select.tv_brand'') }}'
+                            command: home
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: Fan
+                card:
+                  type: entities
+                  entities:
+                    - entity: input_select.fan_brand
+                      name: Select Fan Brand
+              - type: conditional
+                conditions:
+                  - entity: input_select.device_type
+                    state: Fan
+                card:
+                  type: conditional
+                  conditions:
+                    - entity: input_select.fan_brand
+                      state_not: None
+                  card:
+                    type: grid
+                    columns: 2
+                    square: false
+                    cards:
+                      - type: button
+                        name: Power
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: Fan
+                            brand: '{{ states(''input_select.fan_brand'') }}'
+                            command: power
+                      - type: button
+                        name: Swing
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: Fan
+                            brand: '{{ states(''input_select.fan_brand'') }}'
+                            command: swing
+                      - type: button
+                        name: Speed +
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: Fan
+                            brand: '{{ states(''input_select.fan_brand'') }}'
+                            command: speed_up
+                      - type: button
+                        name: Speed -
+                        tap_action:
+                          action: call-service
+                          service: script.send_ir_command
+                          data:
+                            device_type: Fan
+                            brand: '{{ states(''input_select.fan_brand'') }}'
+                            command: speed_down
+    cards: []
+    badges: []
