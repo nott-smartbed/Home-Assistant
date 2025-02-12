@@ -1,0 +1,273 @@
+esphome:
+  name: "control-devices"
+  friendly_name: Control Devices
+
+esp8266:
+  board: nodemcuv2
+
+# Enable logging
+logger:
+  level: DEBUG
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_test       
+  services:
+    - service: send_ir
+      variables:
+        protocol: string
+        data: string
+      then:
+        - lambda: |-
+            ESP_LOGD("IR", "Protocol: %s, Data: %s", protocol.c_str(), data.c_str());
+            uint32_t code = strtoul(data.c_str(), nullptr, 16);
+            auto call = id(ir_transmitter).transmit();
+
+            if (protocol == "nec") {
+              esphome::remote_base::NECData nec_data = { code };
+              esphome::remote_base::NECProtocol().encode(call.get_data(), nec_data);
+            } else if (protocol == "samsung") {
+              esphome::remote_base::SamsungData samsung_data = { code };
+              esphome::remote_base::SamsungProtocol().encode(call.get_data(), samsung_data);
+            } else if (protocol == "panasonic") {
+              esphome::remote_base::PanasonicData panasonic_data = { code };
+              esphome::remote_base::PanasonicProtocol().encode(call.get_data(), panasonic_data);
+            } else if (protocol == "midea") {
+              esphome::remote_base::MideaData midea_data = { code };
+              esphome::remote_base::MideaProtocol().encode(call.get_data(), midea_data);
+            } else {
+              ESP_LOGW("IR", "Unsupported protocol: %s", protocol.c_str());
+            }
+
+            call.set_send_times(2);
+            call.perform();
+
+ota:
+  - platform: esphome
+    password: !secret ota_test
+
+wifi:
+  networks:
+    - ssid: !secret wifi_ssid
+      password: !secret wifi_password
+    - ssid: !secret wifi_ssid1
+      password: !secret wifi_password1
+  ap:
+    ssid: "Test Fallback Hotspot"
+    password: !secret wifi_password
+
+captive_portal:
+
+web_server:
+  port: 80
+          
+remote_receiver:
+  pin: 
+    number: D7
+    inverted: True
+  id: ir_receiver
+  idle: 10ms
+  filter: 100us
+  dump: 
+    - raw
+    - abbwelcome 
+    - aeha
+    - byronsx
+    - canalsat
+    - canalsatld
+    - coolix
+    - dish
+    - dooya
+    - drayton
+    - jvc
+    - keeloq
+    - haier
+    - lg
+    - magiquest
+    - midea
+    - nec
+    - nexa
+    - panasonic
+    - pioneer
+    - rc5
+    - rc6
+    - rc_switch
+    - roomba
+    - samsung
+    - samsung36
+    - sony
+    - toshiba_ac
+    - mirage    
+remote_transmitter:
+  pin: D5
+  id: ir_transmitter
+  carrier_duty_percent: 50%
+
+# Climate configurations for different brands
+climate:
+  - platform: daikin
+    id: daikin_ac
+    name: "Daikin AC"
+    receiver_id: ir_receiver
+    transmitter_id: ir_transmitter
+    supports_cool: True    
+    supports_heat: True
+    visual:
+      min_temperature: 16
+      max_temperature: 30
+      temperature_step: 1
+
+  - platform: daikin_arc
+    id: daikin_arc_ac
+    name: "Daikin ARC AC"
+    receiver_id: ir_receiver
+    transmitter_id: ir_transmitter
+    supports_cool: True    
+    supports_heat: True
+    visual:
+      min_temperature: 16
+      max_temperature: 30
+      temperature_step: 1
+
+  - platform: ballu
+    id: ballu_ac
+    name: "Ballu AC"
+    receiver_id: ir_receiver
+    transmitter_id: ir_transmitter
+    visual:
+      min_temperature: 16
+      max_temperature: 32
+      temperature_step: 1
+
+  - platform: coolix
+    id: coolix_ac
+    name: "Coolix AC"
+    receiver_id: ir_receiver
+    transmitter_id: ir_transmitter
+    visual:
+      min_temperature: 17
+      max_temperature: 30
+      temperature_step: 1
+
+  - platform: delonghi
+    id: delonghi_ac
+    name: "Delonghi AC"
+    receiver_id: ir_receiver
+    transmitter_id: ir_transmitter
+    supports_cool: True    
+    supports_heat: True
+    visual:
+      min_temperature: 18
+      max_temperature: 30
+      temperature_step: 1
+
+  - platform: emmeti
+    id: emmeti_ac
+    name: "Emmeti AC"
+    receiver_id: ir_receiver
+    transmitter_id: ir_transmitter
+    visual:
+      min_temperature: 17
+      max_temperature: 30
+      temperature_step: 1
+
+  - platform: fujitsu_general
+    id: fujitsu_ac
+    name: "Fujitsu AC"
+    receiver_id: ir_receiver
+    transmitter_id: ir_transmitter
+    supports_cool: True    
+    supports_heat: True
+    visual:
+      min_temperature: 16
+      max_temperature: 30
+      temperature_step: 1
+
+  - platform: climate_ir_lg
+    id: lg_ac
+    name: "LG AC"
+    receiver_id: ir_receiver
+    transmitter_id: ir_transmitter
+    visual:
+      min_temperature: 18
+      max_temperature: 30
+      temperature_step: 1
+
+  - platform: midea_ir
+    id: midea_ac
+    name: "Midea AC"
+    receiver_id: ir_receiver
+    transmitter_id: ir_transmitter
+    visual:
+      min_temperature: 17
+      max_temperature: 30
+      temperature_step: 1
+
+  - platform: mitsubishi
+    id: mitsubishi_ac
+    name: "Mitsubishi AC"
+    receiver_id: ir_receiver
+    transmitter_id: ir_transmitter
+    visual:
+      min_temperature: 16
+      max_temperature: 31
+      temperature_step: 1
+
+  - platform: noblex
+    id: noblex_ac
+    name: "Noblex AC"
+    receiver_id: ir_receiver
+    transmitter_id: ir_transmitter
+    visual:
+      min_temperature: 16
+      max_temperature: 30
+      temperature_step: 1
+
+  - platform: tcl112  #Electrolux, TCL, Fuego
+    id: electrolux_ac
+    name: "Electrolux AC"
+    receiver_id: ir_receiver
+    transmitter_id: ir_transmitter
+    visual:
+      min_temperature: 16
+      max_temperature: 31
+      temperature_step: 1
+
+  - platform: toshiba
+    id: toshiba_ac
+    name: "Toshiba AC"
+    receiver_id: ir_receiver
+    transmitter_id: ir_transmitter
+    visual:
+      min_temperature: 16
+      max_temperature: 30
+      temperature_step: 1
+
+  - platform: whirlpool
+    id: whirlpool_ac
+    name: "Whirlpool AC"
+    receiver_id: ir_receiver
+    transmitter_id: ir_transmitter
+    visual:
+      min_temperature: 16
+      max_temperature: 32
+      temperature_step: 1
+
+  - platform: heatpumpir
+    id: panasonic_ac
+    name: "Panasonic AC"
+    protocol: panasonic_ckp
+    horizontal_default: middle
+    vertical_default: auto
+    min_temperature: 16
+    max_temperature: 30
+
+  - platform: heatpumpir
+    id: samsung_ac
+    name: "Samsung AC"
+    protocol: samsung_aqv
+    horizontal_default: middle
+    vertical_default: auto
+    min_temperature: 16
+    max_temperature: 30
